@@ -1,182 +1,354 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <!-- Meta tags สำหรับเปิดแบบ Web App เต็มจอ ปิดแถบ URL / แถบสถานะ -->
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#09090b">
-    <title>ระบบป้ายสัญญาณฝ่ายควบคุมเวลา (Timer Cue Signs)</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- JSZip สำหรับบีบอัดไฟล์รูปภาพแยกเป็น 1 ไฟล์ ZIP -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <!-- Google Fonts: รวม 10 ฟอนต์ไทยยอดนิยม (มีหัว 5 และไม่มีหัว 5) -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@400;700&family=Bai+Jamjuree:wght@400;700&family=Chakra+Petch:wght@400;700&family=IBM+Plex+Sans+Thai:wght@400;700&family=K2D:wght@400;700&family=Kanit:wght@400;700&family=Maitree:wght@400;700&family=Mitr:wght@400;600&family=Prompt:wght@400;700&family=Sarabun:wght@400;700;800&display=swap" rel="stylesheet">
-    <!-- Phosphor Icons -->
-    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#090d16">
+  <title>Stage Timer & Cue Signs (Real-time Sync)</title>
 
-    <style>
-        body {
-            font-family: 'TH Sarabun PSK', 'THSarabunPSK', 'TH Sarabun New', 'Sarabun', sans-serif;
-            user-select: none;
-            -webkit-user-select: none;
-        }
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- JSZip สำหรับโหลดไฟล์แยกเป็น ZIP -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <!-- PeerJS สำหรับ Real-time Sync ฟรี ไม่ต้องตั้งค่าเซิร์ฟเวอร์ -->
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 
-        /* ข้อความป้ายสีขาว คมชัด อ่านง่าย */
-        .sign-white-text {
-            color: #ffffff !important;
-            text-shadow: 0 3px 8px rgba(0, 0, 0, 0.45), 0 1px 3px rgba(0, 0, 0, 0.6);
-        }
+  <!-- Google Fonts 10 ฟอนต์ไทย -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@400;700&family=Bai+Jamjuree:wght@400;700&family=Chakra+Petch:wght@400;700&family=IBM+Plex+Sans+Thai:wght@400;700&family=K2D:wght@400;700&family=Kanit:wght@400;700&family=Maitree:wght@400;700&family=Mitr:wght@400;600&family=Prompt:wght@400;700&family=Sarabun:wght@400;700;800&display=swap" rel="stylesheet">
 
-        /* อนิเมชันเลื่อนจาก ซ้าย ไป ขวา แบบวนลูปต่อเนื่องไร้รอยต่อ (Seamless LTR Loop) */
-        @keyframes marqueeLeftToRight {
-            0% {
-                transform: translate3d(-50%, 0, 0);
-            }
-            100% {
-                transform: translate3d(0%, 0, 0);
-            }
-        }
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background-color: #090d16;
+      color: #ffffff;
+      font-family: 'TH Sarabun PSK', 'THSarabunPSK', 'TH Sarabun New', 'Sarabun', sans-serif;
+      overflow-x: hidden;
+    }
 
-        .animate-ltr-loop {
-            display: flex;
-            width: max-content;
-            animation: marqueeLeftToRight var(--marquee-duration, 6s) linear infinite;
-            will-change: transform;
-        }
+    /* เงาตัวหนังสือสีขาวให้อ่านง่ายบนทุกสีพื้นหลัง */
+    .sign-text-shadow {
+      color: #FFFFFF !important;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.45), 0 1px 3px rgba(0, 0, 0, 0.65);
+    }
 
-        /* อนิเมชันไฟกะพริบเตือนฉุกเฉิน */
-        @keyframes flashPulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.18; }
-        }
+    /* แอนิเมชันวิ่งซ้ายไปขวาแบบไร้รอยต่อ */
+    @keyframes marqueeLeftToRight {
+      0% { transform: translate3d(-50%, 0, 0); }
+      100% { transform: translate3d(0%, 0, 0); }
+    }
+    .marquee-track {
+      display: flex;
+      width: max-content;
+      will-change: transform;
+      animation-name: marqueeLeftToRight;
+      animation-timing-function: linear;
+      animation-iteration-count: infinite;
+    }
 
-        .animate-flash-sign {
-            animation: flashPulse 0.75s ease-in-out infinite;
-        }
+    /* เอฟเฟกต์ไฟกะพริบเตือน */
+    @keyframes flashUrgent {
+      0%, 100% { opacity: 1; filter: brightness(1); }
+      50% { opacity: 0.2; filter: brightness(1.8); }
+    }
+    .flash-active {
+      animation: flashUrgent 0.55s infinite ease-in-out;
+    }
 
-        .cue-card-aspect {
-            aspect-ratio: 4 / 3;
-        }
-
-        .no-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-        .no-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
-
-        /* ป้องกันปัญหาตัวอักษรตกขอบในจอแนวนอน */
-        #fullscreenOverlay {
-            width: 100vw;
-            height: 100vh;
-            height: 100dvh;
-            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
-        }
-
-        /* ซ่อน Cursor อัตโนมัติเมื่อดูเต็มจอ */
-        .cursor-hidden {
-            cursor: none !important;
-        }
-    </style>
+    /* ซ่อน Scrollbar */
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
 </head>
-<body class="bg-zinc-950 text-white min-h-screen flex flex-col">
+<body class="min-h-screen flex flex-col">
 
-    <!-- แถบแจ้งเตือนสถานะ (Toast Notification) -->
-    <div id="toastContainer" class="fixed top-5 right-5 z-[100] flex flex-col gap-2 pointer-events-none"></div>
-
-    <!-- ส่วนหัวเว็บไซต์ (Header & Download Toolbar) -->
-    <header class="bg-zinc-900/90 backdrop-blur-md border-b border-zinc-800 sticky top-0 z-30">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <div class="flex items-center gap-3">
-                <div class="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-600/30 shrink-0">
-                    <i class="ph-fill ph-timer text-2xl text-white"></i>
-                </div>
-                <div>
-                    <h1 class="text-xl sm:text-2xl font-extrabold tracking-tight text-white flex items-center gap-2">
-                        ฝ่ายควบคุมเวลา (Timer Cue Signs)
-                        <span class="text-xs font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 rounded-full">ครบ 15 ป้าย</span>
-                    </h1>
-                    <p class="text-xs sm:text-sm text-zinc-400">
-                        คลิกป้ายเพื่อขยายเต็มจอ รองรับแนวตั้ง/แนวนอน พร้อมวิ่ง <span class="text-amber-400 font-semibold">ซ้าย ➔ ขวา วนลูป</span>
-                    </p>
-                </div>
-            </div>
-
-            <!-- ปุ่มดาวน์โหลดไฟล์รวมรูปภาพ & ตั้งค่าด่วน -->
-            <div class="flex flex-wrap items-center gap-2.5">
-                <button id="defaultMoveToggleBtn" onclick="toggleDefaultAutoMove()" class="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-xs sm:text-sm font-semibold transition-all">
-                    <i class="ph-bold ph-arrows-out-line-horizontal text-amber-400 text-lg"></i>
-                    <span>เปิดซ้าย➔ขวาอัตโนมัติ: <strong id="defaultMoveStatus" class="text-emerald-400">เปิดอยู่</strong></span>
-                </button>
-
-                <button id="downloadZipBtn" onclick="exportAllAsZip()" class="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 active:scale-95 text-white font-bold text-xs sm:text-sm shadow-lg shadow-blue-600/25 transition-all">
-                    <i class="ph-bold ph-file-zip text-lg"></i>
-                    <span>ดาวน์โหลดไฟล์รวม (.ZIP แยก 15 รูป)</span>
-                </button>
-
-                <button id="downloadSheetBtn" onclick="exportAllAsSingleSheet()" class="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold text-xs sm:text-sm shadow-lg shadow-emerald-600/25 transition-all">
-                    <i class="ph-bold ph-grid-four text-lg"></i>
-                    <span>โหลดภาพรวม 15 ป้ายในกรอบเดียว (.PNG)</span>
-                </button>
-            </div>
+  <!-- แถบ Real-time Sync Bar -->
+  <div class="bg-slate-900 border-b border-slate-800 px-3 py-2.5 sticky top-0 z-30 shadow-lg">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
+      
+      <!-- ส่วนเชื่อมต่อห้องออนไลน์ -->
+      <div class="flex flex-wrap items-center gap-2">
+        <div class="flex items-center gap-1.5 bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1">
+          <span id="syncDot" class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span class="text-xs font-bold text-slate-300">ห้องซิงค์:</span>
+          <input id="roomInput" type="text" value="STAGE-01" class="bg-transparent text-amber-400 font-bold text-sm w-24 focus:outline-none uppercase tracking-wider" placeholder="ชื่อห้อง">
         </div>
-    </header>
 
-    <!-- เนื้อหาหลัก (Main Content) -->
-    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        <button onclick="connectSyncRoom()" class="bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition">
+          เชื่อมต่อ / เปลี่ยนห้อง
+        </button>
 
-        <!-- แถบตั้งค่าฟอนต์และน้ำหนักตัวอักษรทุกป้าย -->
-        <div class="mb-6 bg-zinc-900/90 border border-zinc-800 rounded-2xl p-4 sm:p-5 flex flex-col gap-4">
-            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-zinc-800">
-                <div class="flex items-start sm:items-center gap-3">
-                    <div class="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 shrink-0">
-                        <i class="ph-fill ph-text-aa text-2xl"></i>
-                    </div>
-                    <div>
-                        <h2 class="font-bold text-white text-sm sm:text-base">ตั้งค่าฟอนต์และน้ำหนักตัวอักษร (มีหัว / ไม่มีหัว • Bold / ไม่ Bold)</h2>
-                        <p class="text-xs text-zinc-400">ปรับเปลี่ยนฟอนต์ของทุกป้ายพร้อมกัน หรือเพิ่ม/ลบ/แก้ไขป้ายสัญลักษณ์เฉพาะกิจได้ตามต้องการ</p>
-                    </div>
-                </div>
+        <span id="syncStatusText" class="text-xs text-emerald-400 font-medium">ออนไลน์พร้อมซิงค์</span>
+      </div>
 
-                <div class="flex flex-wrap items-center gap-2.5">
-                    <div class="flex items-center gap-2 bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-1.5">
-                        <span class="text-xs font-bold text-zinc-300 whitespace-nowrap">ฟอนต์ทุกป้าย:</span>
-                        <select id="globalFontSelect" onchange="applyGlobalFont(this.value)" class="bg-transparent text-white font-bold text-xs sm:text-sm focus:outline-none cursor-pointer">
-                            <!-- สร้างด้วย JS -->
-                        </select>
-                    </div>
+      <!-- สวิตช์ควบคุมหน้าจอระยะไกล -->
+      <div class="flex items-center gap-3">
+        <label class="flex items-center gap-1.5 cursor-pointer bg-slate-800/90 hover:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700 text-xs font-bold">
+          <input id="remoteControlToggle" type="checkbox" checked class="accent-amber-400 w-4 h-4 rounded">
+          <span>ซิงค์การเปิดป้ายเต็มจอทุกเครื่อง</span>
+        </label>
+        <button onclick="copyShareLink()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 text-xs font-bold px-3 py-1.5 rounded-lg transition">
+          คัดลอกลิงก์เข้าห้องนี้
+        </button>
+      </div>
 
-                    <div class="inline-flex rounded-xl bg-zinc-800 p-1 border border-zinc-700">
-                        <button id="globalWeightBoldBtn" onclick="applyGlobalWeight(true)" class="px-3 py-1 rounded-lg text-xs font-extrabold bg-blue-600 text-white transition">
-                            ตัวหนา (Bold)
-                        </button>
-                        <button id="globalWeightNormalBtn" onclick="applyGlobalWeight(false)" class="px-3 py-1 rounded-lg text-xs font-normal text-zinc-300 hover:text-white transition">
-                            ตัวปกติ (ไม่ Bold)
-                        </button>
-                    </div>
+    </div>
+  </div>
 
-                    <button onclick="openAddSignModal()" class="px-3.5 py-2 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/40 text-blue-300 font-bold text-xs sm:text-sm flex items-center gap-1.5 transition">
-                        <i class="ph-bold ph-plus-circle text-base"></i>
-                        <span>เพิ่มป้ายใหม่</span>
-                    </button>
-                </div>
-            </div>
+  <!-- ส่วนหัวและแถบเครื่องมือหลัก -->
+  <header class="max-w-7xl w-full mx-auto px-4 pt-4 pb-2">
+    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 bg-slate-900/70 border border-slate-800 rounded-2xl p-4">
+      <div>
+        <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-white flex items-center gap-2">
+          <span>🪧 ระบบป้ายสัญญาณควบคุมเวลา (Timer & Cue Signs)</span>
+        </h1>
+        <p class="text-slate-400 text-sm mt-0.5">
+          กดที่ป้ายเพื่อขยายเต็มจอพร้อมวิ่งซ้ายไปขวา • เพิ่ม/ลบ/แก้ไขป้ายซิงค์ออนไลน์ทุกเครื่องแบบเรียลไทม์
+        </p>
+      </div>
 
-            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div class="text-xs sm:text-sm text-zinc-300 space-y-0.5">
-                    <p>• <span class="text-amber-300 font-semibold">คลิกที่ป้ายสัญลักษณ์</span> เพื่อขยายเต็มจอ (รองรับหมุนแนวนอนอัตโนมัติ)</p>
-                    <p>• <span class="text-rose-400 font-semibold">การจัดการป้าย:</span> สามารถกดลบ <i class="ph-bold ph-trash"></i> หรือแก้ไข <i class="ph-bold ph-pencil-simple"></i> แต่ละป้ายได้ทันที</p>
-                </div>
-                <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
-                    <button id="undoDeleteBtn" onclick="undoLastDelete()" class="hidden px-3.5 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 text-amber-300 font-bold text-xs sm:text-sm items-center gap-1.5 transition">
-                        <i class="ph-bold ph-arrow-u-up-left"></i>
+      <!-- ปุ่มจัดการและดาวน์โหลด -->
+      <div class="flex flex-wrap items-center gap-2">
+        <button onclick="openSignModal()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-sm px-4 py-2 rounded-xl shadow transition flex items-center gap-1.5">
+          <span class="text-lg leading-none">+</span> เพิ่มป้ายใหม่
+        </button>
+        <button onclick="downloadAllAsZip()" id="btnZip" class="bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm px-3.5 py-2 rounded-xl shadow transition">
+          📦 โหลดไฟล์รวม (.ZIP แยกรูป)
+        </button>
+        <button onclick="downloadCombinedSheet()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm px-3.5 py-2 rounded-xl shadow transition">
+          🖼️ โหลดภาพรวมในกรอบเดียว (.PNG)
+        </button>
+        <button onclick="resetToDefaultSigns()" class="bg-slate-800 hover:bg-rose-900/60 text-slate-300 hover:text-rose-200 border border-slate-700 text-xs font-bold px-3 py-2 rounded-xl transition">
+          รีเซ็ตค่าเริ่มต้น
+        </button>
+      </div>
+    </div>
+
+    <!-- แถบเปลี่ยนฟอนต์และตัวหนาทั้งหมดในคลิกเดียว -->
+    <div class="mt-3 flex flex-wrap items-center justify-between gap-2 bg-slate-900/40 border border-slate-800/80 rounded-xl px-3.5 py-2">
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="text-xs font-bold text-slate-400">ตั้งค่าทุกป้ายพร้อมกัน:</span>
+        <select id="globalFontSelect" onchange="applyGlobalFont(this.value)" class="bg-slate-800 text-white text-xs font-bold border border-slate-700 rounded-lg px-2.5 py-1.5 focus:outline-none">
+          <!-- สร้างตัวเลือกฟอนต์ด้วย JS -->
+        </select>
+        <button id="globalBoldBtn" onclick="toggleGlobalBold()" class="bg-blue-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg border border-blue-500 transition">
+          B ตัวหนา (Bold): เปิดอยู่
+        </button>
+      </div>
+      <div class="text-xs text-slate-400">
+        จำนวนป้ายทั้งหมด: <strong id="signCountLabel" class="text-white">15</strong> ป้าย
+      </div>
+    </div>
+  </header>
+
+  <!-- ตารางแสดงป้ายสัญลักษณ์ -->
+  <main class="max-w-7xl w-full mx-auto px-4 py-3 flex-1">
+    <div id="signsGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3.5">
+      <!-- การ์ดป้ายถูกสร้างด้วย JS -->
+    </div>
+  </main>
+
+  <!-- ========================================================= -->
+  <!-- โหมดแสดงผลเต็มหน้าจอ (FULLSCREEN STAGE MONITOR)           -->
+  <!-- ========================================================= -->
+  <div id="fullscreenOverlay" class="fixed inset-0 z-50 hidden flex-col justify-between overflow-hidden select-none" style="background-color: #164e9f;">
+    
+    <!-- แถบควบคุมด้านบน (ซ่อนได้เมื่อแตะกลางจอ) -->
+    <div id="fsTopBar" class="relative z-20 bg-black/65 backdrop-blur-md border-b border-white/15 px-3 py-2 transition-all duration-200">
+      <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
+        
+        <!-- ปุ่มเลื่อนป้ายก่อนหน้า / ถัดไป -->
+        <div class="flex items-center gap-1.5">
+          <button onclick="stepSign(-1)" class="bg-white/15 hover:bg-white/25 text-white font-bold px-3 py-1.5 rounded-lg text-sm">
+            ◀
+          </button>
+          <div class="px-2">
+            <div id="fsSignIndex" class="text-[11px] text-white/75 leading-none">ป้ายที่ 1 / 15</div>
+            <div id="fsSignTitle" class="text-sm font-bold text-white leading-tight truncate max-w-[150px] sm:max-w-[240px]">START</div>
+          </div>
+          <button onclick="stepSign(1)" class="bg-white/15 hover:bg-white/25 text-white font-bold px-3 py-1.5 rounded-lg text-sm">
+            ▶
+          </button>
+        </div>
+
+        <!-- ปุ่มควบคุมการเคลื่อนไหว ซ้าย->ขวา และความเร็ว -->
+        <div class="flex flex-wrap items-center gap-1.5">
+          <button id="btnToggleMove" onclick="toggleMovement()" class="bg-amber-400 text-slate-950 font-bold text-xs px-3 py-1.5 rounded-lg shadow">
+            ⇄ วิ่งซ้าย→ขวา: เปิดอยู่
+          </button>
+
+          <div class="flex items-center gap-1.5 bg-white/10 px-2.5 py-1 rounded-lg border border-white/15">
+            <span class="text-xs text-white/90">ความเร็ว:</span>
+            <input id="speedRange" type="range" min="3" max="22" value="10" oninput="changeSpeed(this.value)" class="w-20 accent-amber-400 cursor-pointer">
+          </div>
+
+          <div class="flex items-center bg-white/10 rounded-lg border border-white/15 overflow-hidden">
+            <button onclick="adjustFontSize(-3)" class="px-2.5 py-1 hover:bg-white/20 text-white font-bold text-xs">A-</button>
+            <span class="text-xs px-1.5 text-white/90">ขนาด</span>
+            <button onclick="adjustFontSize(3)" class="px-2.5 py-1 hover:bg-white/20 text-white font-bold text-xs">A+</button>
+          </div>
+
+          <button id="btnFlash" onclick="toggleFlash()" class="bg-white/10 hover:bg-white/20 text-white font-bold text-xs px-2.5 py-1.5 rounded-lg border border-white/15">
+            ⚡ กะพริบ
+          </button>
+
+          <button onclick="forceBrowserFullscreen()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-2.5 py-1.5 rounded-lg">
+            ⛶ เต็มจอไร้ขอบ
+          </button>
+
+          <button onclick="closeFullscreen(true)" class="bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs px-3 py-1.5 rounded-lg">
+            ✕ ปิด
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- พื้นที่แสดงข้อความป้าย (รองรับทั้งแนวตั้งและแนวนอน 100% ไม่ตกขอบ) -->
+    <div id="fsStageArea" onclick="toggleFsBars()" class="relative flex-1 w-full h-full flex items-center justify-center overflow-hidden cursor-pointer">
+      
+      <!-- โหมดวิ่งซ้ายไปขวาแบบวนลูป -->
+      <div id="fsMarqueeWrapper" class="w-full h-full flex items-center overflow-hidden">
+        <div id="fsMarqueeTrack" class="marquee-track items-center" style="animation-duration: 11s;">
+          <div id="fsMarqueeGroup1" class="flex items-center justify-around shrink-0"></div>
+          <div id="fsMarqueeGroup2" class="flex items-center justify-around shrink-0"></div>
+        </div>
+      </div>
+
+      <!-- โหมดหยุดนิ่งอยู่กลางจอ -->
+      <div id="fsStaticWrapper" class="hidden w-full h-full items-center justify-center px-6 text-center">
+        <div id="fsStaticText" class="sign-text-shadow leading-[1.08] whitespace-pre-line break-words"></div>
+      </div>
+
+      <!-- คำแนะนำแตะซ่อนเมนู -->
+      <div id="fsHintPill" class="absolute bottom-3 left-1/2 -translate-x-1/2 bg-black/45 text-white/80 text-[11px] px-3 py-1 rounded-full pointer-events-none transition-opacity duration-300">
+        แตะตรงกลางจอเพื่อซ่อน/แสดงแถบเมนูเต็มจอ 100%
+      </div>
+    </div>
+
+    <!-- แถบเลือกป้ายด่วนด้านล่าง -->
+    <div id="fsBottomBar" class="relative z-20 bg-black/65 backdrop-blur-md border-t border-white/15 px-3 py-2 transition-all duration-200">
+      <div id="fsQuickStrip" class="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+        <!-- ปุ่มสลับป้ายด่วนสร้างด้วย JS -->
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- หน้าต่างเพิ่ม / แก้ไขป้ายสัญลักษณ์ (MODAL)                  -->
+  <!-- ========================================================= -->
+  <div id="signModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/75 backdrop-blur-sm p-4 overflow-y-auto">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-xl w-full p-5 shadow-2xl my-auto">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h2 id="modalHeading" class="text-lg font-bold text-white">เพิ่มป้ายสัญลักษณ์ใหม่</h2>
+        <button onclick="closeSignModal()" class="text-slate-400 hover:text-white text-xl leading-none">✕</button>
+      </div>
+
+      <div class="space-y-4 mt-4">
+        <!-- พรีวิวป้ายสด -->
+        <div id="modalPreviewBox" class="w-full h-36 rounded-xl flex items-center justify-center text-center p-4 border-2 border-white/30 shadow-inner transition-colors" style="background-color: #1f5bb6;">
+          <div id="modalPreviewText" class="sign-text-shadow text-3xl leading-tight whitespace-pre-line">ตัวอย่างข้อความ</div>
+        </div>
+
+        <!-- ข้อความบนป้าย -->
+        <div>
+          <label class="block text-xs font-bold text-slate-300 mb-1">ข้อความบนป้าย (กด Enter เพื่อขึ้นบรรทัดใหม่ได้):</label>
+          <textarea id="modalTextInput" rows="2" oninput="updateModalPreview()" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white text-base focus:outline-none focus:border-amber-400" placeholder="เช่น เหลือ&#10;3 นาที"></textarea>
+        </div>
+
+        <!-- สีพื้นหลังป้าย -->
+        <div>
+          <label class="block text-xs font-bold text-slate-300 mb-1.5">สีพื้นหลังป้าย (ตัวหนังสือสีขาวล้วน):</label>
+          <div class="flex flex-wrap items-center gap-2">
+            <input id="modalColorInput" type="color" value="#1f5bb6" oninput="updateModalPreview()" class="w-10 h-10 rounded-lg cursor-pointer bg-transparent border-0">
+            <button type="button" onclick="setModalColor('#1f5bb6')" class="px-2.5 py-1 rounded text-xs font-bold text-white" style="background:#1f5bb6">น้ำเงิน</button>
+            <button type="button" onclick="setModalColor('#27ae49')" class="px-2.5 py-1 rounded text-xs font-bold text-white" style="background:#27ae49">เขียว</button>
+            <button type="button" onclick="setModalColor('#f58216')" class="px-2.5 py-1 rounded text-xs font-bold text-white" style="background:#f58216">ส้ม</button>
+            <button type="button" onclick="setModalColor('#f01e1e')" class="px-2.5 py-1 rounded text-xs font-bold text-white" style="background:#f01e1e">แดง</button>
+            <button type="button" onclick="setModalColor('#eab308')" class="px-2.5 py-1 rounded text-xs font-bold text-white" style="background:#eab308">เหลืองเข้ม</button>
+            <button type="button" onclick="setModalColor('#609CE1')" class="px-2.5 py-1 rounded text-xs font-bold text-white" style="background:#609CE1">ฟ้า</button>
+            <button type="button" onclick="setModalColor('#7c3aed')" class="px-2.5 py-1 rounded text-xs font-bold text-white" style="background:#7c3aed">ม่วง</button>
+          </div>
+        </div>
+
+        <!-- เลือกความหนา Bold / ไม่ Bold -->
+        <div class="flex items-center justify-between bg-slate-950 p-3 rounded-xl border border-slate-800">
+          <span class="text-xs font-bold text-slate-300">รูปแบบความหนาตัวอักษร:</span>
+          <div class="flex gap-2">
+            <button type="button" id="modalBtnBold" onclick="setModalBold(true)" class="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-blue-600 text-white">
+              B ตัวหนา (Bold)
+            </button>
+            <button type="button" id="modalBtnNormal" onclick="setModalBold(false)" class="px-3.5 py-1.5 rounded-lg text-xs font-normal bg-slate-800 text-slate-300">
+              ตัวปกติ (ไม่ Bold)
+            </button>
+          </div>
+        </div>
+
+        <!-- เลือกฟอนต์ 10 แบบ (มีหัว 5 / ไม่มีหัว 5) -->
+        <div>
+          <label class="block text-xs font-bold text-slate-300 mb-1.5">เลือกฟอนต์ (มีหัว 5 ฟอนต์ / ไม่มีหัว 5 ฟอนต์):</label>
+          <div id="modalFontGrid" class="grid grid-cols-2 gap-2 max-h-44 overflow-y-auto pr-1">
+            <!-- สร้างปุ่มเลือกฟอนต์ด้วย JS -->
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end gap-2 mt-5 pt-3 border-t border-slate-800">
+        <button onclick="closeSignModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-bold">
+          ยกเลิก
+        </button>
+        <button onclick="saveSignFromModal()" class="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-sm font-bold shadow">
+          บันทึกและซิงค์ออนไลน์
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // =========================================================================
+    // 1. รายชื่อ 10 ฟอนต์ (มีหัว 5 ฟอนต์ และ ไม่มีหัว 5 ฟอนต์)
+    // =========================================================================
+    const FONT_LIST = [
+      { id: 'sarabun', name: '1. TH Sarabun PSK (มีหัว)', family: "'TH Sarabun PSK', 'THSarabunPSK', 'Sarabun', sans-serif" },
+      { id: 'chakra',  name: '2. Chakra Petch (มีหัว)',  family: "'Chakra Petch', sans-serif" },
+      { id: 'k2d',     name: '3. K2D (มีหัว)',           family: "'K2D', sans-serif" },
+      { id: 'bai',     name: '4. Bai Jamjuree (มีหัว)',  family: "'Bai Jamjuree', sans-serif" },
+      { id: 'maitree', name: '5. Maitree (มีหัว)',       family: "'Maitree', serif" },
+      { id: 'kanit',   name: '6. Kanit (ไม่มีหัว)',      family: "'Kanit', sans-serif" },
+      { id: 'prompt',  name: '7. Prompt (ไม่มีหัว)',     family: "'Prompt', sans-serif" },
+      { id: 'mitr',    name: '8. Mitr (ไม่มีหัว)',       family: "'Mitr', sans-serif" },
+      { id: 'ibm',     name: '9. IBM Plex Thai (ไม่มีหัว)', family: "'IBM Plex Sans Thai', sans-serif" },
+      { id: 'anuphan', name: '10. Anuphan (ไม่มีหัว)',   family: "'Anuphan', sans-serif" }
+    ];
+
+    // =========================================================================
+    // 2. ข้อมูลป้ายเริ่มต้น 15 ป้ายตามต้นฉบับ
+    // =========================================================================
+    const DEFAULT_SIGNS = [
+      { id: 's1',  text: 'START',                     bg: '#1c54b2', font: 'sarabun', bold: true },
+      { id: 's2',  text: 'On pace',                   bg: '#23b24b', font: 'sarabun', bold: true },
+      { id: 's3',  text: 'พร้อมแล้ว',                  bg: '#23b24b', font: 'sarabun', bold: true },
+      { id: 's4',  text: 'เหลือ\n15 นาที',             bg: '#f58216', font: 'sarabun', bold: true },
+      { id: 's5',  text: 'เหลือ\n10 นาที',             bg: '#f58216', font: 'sarabun', bold: true },
+      { id: 's6',  text: 'เหลือ\n5 นาที',              bg: '#f58216', font: 'sarabun', bold: true },
+      { id: 's7',  text: 'เหลือ\n2 นาที',              bg: '#f01e1e', font: 'sarabun', bold: true },
+      { id: 's8',  text: 'เหลือ\n1 นาที',              bg: '#f01e1e', font: 'sarabun', bold: true },
+      { id: 's9',  text: 'เร่ง!!!',                    bg: '#f01e1e', font: 'sarabun', bold: true },
+      { id: 's10', text: 'อ.ยัง\nไม่มา',               bg: '#f5b800', font: 'sarabun', bold: true },
+      { id: 's11', text: 'ยื้ออ',                      bg: '#f5b800', font: 'sarabun', bold: true },
+      { id: 's12', text: 'ผ่านมา\n5 นาที',             bg: '#6ba4e8', font: 'sarabun', bold: true },
+      { id: 's13', text: 'ผ่านมา\n1 นาที',             bg: '#6ba4e8', font: 's                        <i class="ph-bold ph-arrow-u-up-left"></i>
                         <span>กู้คืนป้ายล่าสุด</span>
                     </button>
                     <button onclick="resetDefaultSigns()" class="px-3.5 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-300 font-bold text-xs sm:text-sm flex items-center gap-1.5 transition">
