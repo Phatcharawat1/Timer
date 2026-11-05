@@ -162,6 +162,14 @@
                         </button>
                     </div>
 
+                    <!-- ปุ่มปรับขนาดตัวอักษรทุกป้าย (หน้าจอหลัก) -->
+<div class="flex items-center gap-1 bg-zinc-800 border border-zinc-700 rounded-xl px-2.5 py-1.5">
+    <span class="text-xs font-bold text-zinc-300 whitespace-nowrap">ขนาดตัวอักษร:</span>
+    <button onclick="adjustGlobalScale(-0.1)" class="w-7 h-7 rounded-lg bg-zinc-700 hover:bg-zinc-600 text-white font-extrabold text-sm flex items-center justify-center transition" title="ลดขนาด">-</button>
+    <button onclick="resetGlobalScale()" class="px-2 py-0.5 rounded-lg bg-zinc-700 hover:bg-zinc-600 text-amber-300 font-bold text-xs transition" title="รีเซ็ต">รีเซ็ต</button>
+    <button onclick="adjustGlobalScale(0.1)" class="w-7 h-7 rounded-lg bg-zinc-700 hover:bg-zinc-600 text-white font-extrabold text-sm flex items-center justify-center transition" title="เพิ่มขนาด">+</button>
+</div>
+
                     <button onclick="openAddSignModal()" class="px-3.5 py-2 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/40 text-blue-300 font-bold text-xs sm:text-sm flex items-center gap-1.5 transition">
                         <i class="ph-bold ph-plus-circle text-base"></i>
                         <span>เพิ่มป้ายใหม่</span>
