@@ -162,13 +162,13 @@
                         </button>
                     </div>
 
-                    <!-- ปุ่มปรับขนาดตัวอักษรทุกป้าย (หน้าจอหลัก) -->
-<div class="flex items-center gap-1 bg-zinc-800 border border-zinc-700 rounded-xl px-2.5 py-1.5">
-    <span class="text-xs font-bold text-zinc-300 whitespace-nowrap">ขนาดตัวอักษร:</span>
-    <button onclick="adjustGlobalScale(-0.1)" class="w-7 h-7 rounded-lg bg-zinc-700 hover:bg-zinc-600 text-white font-extrabold text-sm flex items-center justify-center transition" title="ลดขนาด">-</button>
-    <button onclick="resetGlobalScale()" class="px-2 py-0.5 rounded-lg bg-zinc-700 hover:bg-zinc-600 text-amber-300 font-bold text-xs transition" title="รีเซ็ต">รีเซ็ต</button>
-    <button onclick="adjustGlobalScale(0.1)" class="w-7 h-7 rounded-lg bg-zinc-700 hover:bg-zinc-600 text-white font-extrabold text-sm flex items-center justify-center transition" title="เพิ่มขนาด">+</button>
-</div>
+                    <!-- ปุ่มเพิ่ม/ลดขนาดตัวอักษรภาพรวมทั้งหมด -->
+                    <div class="flex items-center gap-1 bg-zinc-800 border border-zinc-700 rounded-xl px-2.5 py-1.5">
+                        <span class="text-xs font-bold text-zinc-300 whitespace-nowrap">ขนาด:</span>
+                        <button onclick="adjustGlobalScale(-0.1)" class="w-7 h-7 rounded-lg bg-zinc-700 hover:bg-zinc-600 text-white font-extrabold text-sm flex items-center justify-center transition" title="ลดขนาด">-</button>
+                        <button onclick="resetGlobalScale()" class="px-2 py-0.5 rounded-lg bg-zinc-700 hover:bg-zinc-600 text-amber-300 font-bold text-xs transition" title="รีเซ็ต">รีเซ็ต</button>
+                        <button onclick="adjustGlobalScale(0.1)" class="w-7 h-7 rounded-lg bg-zinc-700 hover:bg-zinc-600 text-white font-extrabold text-sm flex items-center justify-center transition" title="เพิ่มขนาด">+</button>
+                    </div>
 
                     <button onclick="openAddSignModal()" class="px-3.5 py-2 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/40 text-blue-300 font-bold text-xs sm:text-sm flex items-center gap-1.5 transition">
                         <i class="ph-bold ph-plus-circle text-base"></i>
@@ -178,6 +178,145 @@
             </div>
 
             <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div class="text-xs sm:text-sm text-zinc-300 space-y-0.5">
+                    <p>• <span class="text-amber-300 font-semibold">คลิกที่ป้ายสัญลักษณ์</span> เพื่อขยายเต็มจอ (รองรับหมุนแนวนอนอัตโนมัติ)</p>
+                    <p>• <span class="text-rose-400 font-semibold">การจัดการป้าย:</span> สามารถกดลบ <i class="ph-bold ph-trash"></i> หรือแก้ไข <i class="ph-bold ph-pencil-simple"></i> แต่ละป้ายได้ทันที</p>
+                </div>
+                <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+                    <button id="undoDeleteBtn" onclick="undoLastDelete()" class="hidden px-3.5 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 text-amber-300 font-bold text-xs sm:text-sm items-center gap-1.5 transition">
+                        <i class="ph-bold ph-arrow-u-up-left"></i>
+                        <span>กู้คืนป้ายล่าสุด</span>
+                    </button>
+                    <button onclick="resetDefaultSigns()" class="px-3.5 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-300 font-bold text-xs sm:text-sm flex items-center gap-1.5 transition">
+                        <i class="ph-bold ph-arrows-counter-clockwise"></i>
+                        <span>รีเซ็ต 15 ป้ายตั้งต้น</span>
+                    </button>
+                    <button onclick="openSignFullscreen(0)" class="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs sm:text-sm flex items-center gap-1.5 shadow-md transition">
+                        <i class="ph-bold ph-corners-out text-base"></i>
+                        <span>เปิดป้ายเต็มจอ</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- กรอบแสดงป้ายสัญลักษณ์ทั้งหมด -->
+        <div class="bg-white rounded-3xl p-4 sm:p-6 shadow-2xl border-4 border-zinc-800">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-4 pb-3 border-b border-zinc-200">
+                <div class="flex items-center gap-2 text-zinc-800">
+                    <i class="ph-fill ph-squares-four text-xl text-blue-600"></i>
+                    <span class="font-extrabold text-base sm:text-lg">สัญลักษณ์ทั้งหมดในงาน (คลิกป้ายเพื่อขยายเต็มจอ)</span>
+                </div>
+                <span id="totalSignCountBadge" class="text-xs font-bold bg-zinc-100 text-zinc-700 px-3 py-1 rounded-full border border-zinc-300">
+                    15 ป้ายพร้อมใช้งาน
+                </span>
+            </div>
+
+            <!-- Grid ป้าย -->
+            <div id="signsGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3.5 sm:gap-4">
+                <!-- สร้างด้วย JavaScript -->
+            </div>
+        </div>
+
+        <!-- คำอธิบายเพิ่มเติม -->
+        <div class="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="bg-zinc-900/70 border border-zinc-800/90 rounded-2xl p-5">
+                <h2 class="text-base font-bold text-amber-400 flex items-center gap-2 mb-2.5">
+                    <i class="ph-fill ph-clock-countdown text-lg"></i>
+                    หน้าที่ฝ่าย Timer (จากเอกสารงาน)
+                </h2>
+                <ul class="text-sm text-zinc-300 space-y-2 list-disc list-inside">
+                    <li>ควบคุมเวลาของงานให้เป็นไปตามกำหนดการมากที่สุด</li>
+                    <li>แจ้งเตือนเวลาพิธีกรหรือผู้ดำเนินรายการว่าเวลาเหลือเท่าไร</li>
+                    <li>ใช้ป้ายสัญลักษณ์สีเพื่อความรวดเร็วและชัดเจนในระยะไกล</li>
+                </ul>
+            </div>
+            <div class="bg-zinc-900/70 border border-zinc-800/90 rounded-2xl p-5">
+                <h2 class="text-base font-bold text-blue-400 flex items-center gap-2 mb-2.5">
+                    <i class="ph-fill ph-keyboard text-lg"></i>
+                    ปุ่มลัดคีย์บอร์ด (โหมดเต็มจอ)
+                </h2>
+                <div class="grid grid-cols-2 gap-2 text-xs sm:text-sm text-zinc-300">
+                    <div class="bg-zinc-800/70 px-3 py-2 rounded-xl flex items-center justify-between">
+                        <span>เปลี่ยนป้ายก่อน/ถัดไป</span>
+                        <kbd class="px-2 py-0.5 bg-zinc-700 rounded text-white font-bold">◀ / ▶</kbd>
+                    </div>
+                    <div class="bg-zinc-800/70 px-3 py-2 rounded-xl flex items-center justify-between">
+                        <span>สลับวิ่ง ซ้าย➔ขวา</span>
+                        <kbd class="px-2 py-0.5 bg-zinc-700 rounded text-white font-bold">Spacebar</kbd>
+                    </div>
+                    <div class="bg-zinc-800/70 px-3 py-2 rounded-xl flex items-center justify-between">
+                        <span>ไฟกะพริบเตือน</span>
+                        <kbd class="px-2 py-0.5 bg-zinc-700 rounded text-white font-bold">F</kbd>
+                    </div>
+                    <div class="bg-zinc-800/70 px-3 py-2 rounded-xl flex items-center justify-between">
+                        <span>ปิดเต็มจอ</span>
+                        <kbd class="px-2 py-0.5 bg-zinc-700 rounded text-white font-bold">ESC</kbd>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- ========================================== -->
+    <!-- โมดอลแสดงป้ายขยายเต็มจอ (รองรับแนวนอนสมบูรณ์แบบ) -->
+    <!-- ========================================== -->
+    <div id="fullscreenOverlay" class="fixed inset-0 z-50 hidden flex-col justify-between overflow-hidden select-none transition-colors duration-200">
+        
+        <!-- แถบควบคุมด้านบน -->
+        <div id="fsTopControls" class="relative z-20 bg-black/80 backdrop-blur-md border-b border-white/15 px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 transition-opacity duration-300 shrink-0">
+            <div class="flex items-center gap-2">
+                <button onclick="prevSign()" class="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition">
+                    <i class="ph-bold ph-caret-left text-lg"></i>
+                </button>
+                <div class="text-left">
+                    <div id="fsSignIndex" class="text-[10px] font-bold text-amber-300 uppercase tracking-wider">ป้ายที่ 1 / 15</div>
+                    <div id="fsSignTitle" class="text-xs sm:text-sm font-extrabold text-white truncate max-w-[120px] sm:max-w-[180px]">START</div>
+                </div>
+                <button onclick="nextSign()" class="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition">
+                    <i class="ph-bold ph-caret-right text-lg"></i>
+                </button>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2">
+                <button id="fsMoveToggleBtn" onclick="toggleMarqueeMove()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-extrabold text-xs shadow-lg transition-all">
+                    <i class="ph-bold ph-arrow-fat-lines-right text-base"></i>
+                    <span id="fsMoveBtnText">ซ้าย➔ขวา: เปิด</span>
+                </button>
+
+                <!-- ปุ่มเพิ่ม/ลดขนาดตัวอักษรเฉพาะป้ายในโหมดเต็มจอ -->
+                <div class="flex items-center gap-1 bg-white/10 border border-white/15 px-2.5 py-1 rounded-xl">
+                    <span class="text-[11px] font-bold text-zinc-200">ขนาด:</span>
+                    <button onclick="adjustCurrentSignScale(-0.1)" class="w-6 h-6 rounded bg-white/15 hover:bg-white/30 text-white font-extrabold text-xs flex items-center justify-center transition" title="ลดขนาด">-</button>
+                    <span id="fsScaleLabel" class="text-[11px] font-extrabold text-amber-300 min-w-[32px] text-center">100%</span>
+                    <button onclick="adjustCurrentSignScale(0.1)" class="w-6 h-6 rounded bg-white/15 hover:bg-white/30 text-white font-extrabold text-xs flex items-center justify-center transition" title="เพิ่มขนาด">+</button>
+                </div>
+
+                <div class="hidden sm:flex items-center gap-1.5 bg-white/10 border border-white/15 px-2.5 py-1 rounded-xl">
+                    <span class="text-[11px] font-bold text-zinc-200">ความเร็ว:</span>
+                    <input id="speedSlider" type="range" min="2" max="14" step="0.5" value="6" oninput="updateMarqueeSpeed(this.value)" class="w-16 accent-amber-400 cursor-pointer">
+                    <span id="speedValueLabel" class="text-[11px] font-extrabold text-amber-300 min-w-[28px] text-right">ปกติ</span>
+                </div>
+
+                <div class="flex items-center gap-1 bg-white/10 border border-white/15 px-2 py-1 rounded-xl">
+                    <select id="fsFontSelect" onchange="changeCurrentSignFontInFS(this.value)" class="bg-transparent text-white text-[11px] font-bold focus:outline-none cursor-pointer max-w-[110px]">
+                        <!-- ตัวเลือกฟอนต์ -->
+                    </select>
+                </div>
+
+                <button id="fsWeightToggleBtn" onclick="toggleCurrentSignWeightInFS()" class="px-2.5 py-1 rounded-xl bg-white/15 hover:bg-white/25 border border-white/20 text-white text-[11px] font-bold transition">
+                    <span id="fsWeightBtnLabel">B ตัวหนา</span>
+                </button>
+
+                <button id="fsFlashBtn" onclick="toggleFlashEffect()" class="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-white font-bold text-[11px] transition">
+                    <i class="ph-bold ph-lightning text-amber-400"></i>
+                    <span>กะพริบ</span>
+                </button>
+            </div>
+
+            <div class="flex items-center gap-1.5">
+                <button onclick="downloadCurrentSignPNG()" class="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition" title="ดาวน์โหลดป้ายนี้ (.PNG)">
+                    <i class="ph-bold ph-download-simple text-base"></i>
+         ass="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div class="text-xs sm:text-sm text-zinc-300 space-y-0.5">
                     <p>• <span class="text-amber-300 font-semibold">คลิกที่ป้ายสัญลักษณ์</span> เพื่อขยายเต็มจอ (รองรับหมุนแนวนอนอัตโนมัติ)</p>
                     <p>• <span class="text-rose-400 font-semibold">การจัดการป้าย:</span> สามารถกดลบ <i class="ph-bold ph-trash"></i> หรือแก้ไข <i class="ph-bold ph-pencil-simple"></i> แต่ละป้ายได้ทันที</p>
